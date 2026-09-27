@@ -165,7 +165,7 @@
   }
   .cover div {
     width: 100%; height: 100%;
-    background: #111 center / 178% auto no-repeat;
+    background: #111 center / cover no-repeat;
     filter: contrast(1.08);
   }
   .cover::before, .cover::after {
@@ -265,6 +265,64 @@
   @media (prefers-reduced-motion: reduce) {
     .grain, .tracking, #tune, .live i { animation: none; }
   }
+
+  /* ================= LYRICS ================= */
+  #lyrics {
+    position: fixed; z-index: 6; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity .5s;
+  }
+  body.lyrics-on #lyrics { opacity: 1; pointer-events: auto; }
+  body.lyrics-on .now { opacity: 0; pointer-events: none; }
+
+  #lyricsBg {
+    position: absolute; inset: -12%;
+    background: #000 center / cover no-repeat;
+    filter: blur(64px) saturate(1.5) brightness(.55);
+    transform: scale(1.15);
+  }
+  #lyrics::before {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,.8), rgba(0,0,0,.45) 30%, rgba(0,0,0,.45) 70%, rgba(0,0,0,.85));
+  }
+  #lyricsWrap {
+    position: relative; z-index: 1;
+    width: min(880px, 92vw);
+    max-height: 72vh;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(180deg, transparent, #000 14%, #000 82%, transparent);
+    mask-image: linear-gradient(180deg, transparent, #000 14%, #000 82%, transparent);
+    padding: 6vh 0;
+  }
+  #lyricsScroll { transition: transform .55s cubic-bezier(.22, 1, .36, 1); will-change: transform; }
+  .lline {
+    margin: 0 0 clamp(16px, 3vh, 30px);
+    font: 800 clamp(21px, 3.6vw, 38px)/1.32 -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+    color: rgba(255,255,255,.28);
+    filter: blur(3.5px);
+    transform-origin: left center;
+    transform: scale(.94);
+    cursor: pointer;
+    transition: color .45s, filter .45s, transform .45s, text-shadow .45s;
+  }
+  .lline.sung { color: rgba(255,255,255,.16); }
+  .lline.active {
+    color: #fff; filter: blur(0); transform: scale(1.05);
+    text-shadow: 0 0 16px var(--accent), 0 0 44px var(--accent), 0 2px 0 rgba(0,0,0,.6);
+  }
+  .lnote {
+    position: relative; z-index: 1; text-align: center; max-width: 60ch;
+    font: 400 clamp(15px, 2vw, 19px)/1.6 "Special Elite", monospace;
+    color: rgba(255,255,255,.75); letter-spacing: .03em;
+  }
+  .lnote b { display: block; margin-bottom: 10px; font: 400 clamp(28px, 4vw, 42px) "Permanent Marker", cursive; color: var(--paper); }
+  #lyricsBtn[aria-pressed="true"] { color: var(--accent); }
+
+  @media (prefers-reduced-motion: reduce) {
+    #lyricsScroll { transition: none; }
+    .lline { transition: none; }
+  }
 </style>
 </head>
 <body class="active">
@@ -301,6 +359,11 @@
     </div>
   </section>
 
+  <div id="lyrics" aria-live="polite">
+    <div id="lyricsBg"></div>
+    <div id="lyricsWrap"><div id="lyricsScroll"></div></div>
+  </div>
+
   <nav class="deck" id="deck" aria-label="Player controls">
     <div class="bar">
       <span id="cur">00:00</span>
@@ -325,6 +388,10 @@
         <span class="lbl">FF</span>
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 4h3v16h-3zM4 4v16l12-8z"/></svg>
       </button>
+      <button id="lyricsBtn" aria-pressed="false" aria-label="Lyrics" title="Lyrics (L)">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h9l4 4v12H6z" opacity=".18"/><path d="M8 9h6M8 12.5h9M8 16h7" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+        <span class="lbl">LYRICS</span>
+      </button>
       <button id="full" class="end" aria-label="Full screen" title="Full screen (F)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square"><path d="M3 9V3h6M15 3h6v6M21 15v6h-6M9 21H3v-6"/></svg>
       </button>
@@ -332,6 +399,7 @@
   </nav>
 
 <script src="tracks.js"></script>
+<script src="lyrics.js"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -395,6 +463,7 @@
     setPoster(t.id);
     setProgress(0, 0);
     showTitleCard();
+    renderLyrics(t);
 
     if ("mediaSession" in navigator) {
       navigator.mediaSession.metadata = new MediaMetadata({
@@ -402,6 +471,53 @@
         artwork: [{ src: yt(t.cover, "hqdefault"), sizes: "480x360", type: "image/jpeg" }],
       });
     }
+  }
+
+  // ---------- lyrics ----------
+  let lyricsLines = [], lyricsActive = -1;
+  function renderLyrics(t) {
+    $("lyricsBg").style.backgroundImage = `url(${yt(t.cover, "hqdefault")})`;
+    const scroll = $("lyricsScroll");
+    scroll.style.transition = "none";
+    scroll.style.transform = "translateY(0)";
+    scroll.textContent = "";
+    lyricsLines = LYRICS[t.id] || [];
+    lyricsActive = -1;
+    if (!lyricsLines.length) {
+      const p = document.createElement("p");
+      p.className = "lnote";
+      p.innerHTML = `<b>No lyrics yet</b>Timed lyrics aren't in for "${t.title}". Add them in lyrics.js.`;
+      scroll.appendChild(p);
+      return;
+    }
+    lyricsLines.forEach((line, i) => {
+      const p = document.createElement("p");
+      p.className = "lline";
+      p.textContent = line.text;
+      p.dataset.i = i;
+      p.addEventListener("click", () => { if (ready) player.seekTo(line.t, true); });
+      scroll.appendChild(p);
+    });
+    requestAnimationFrame(() => { scroll.style.transition = ""; });
+  }
+  function syncLyrics(time) {
+    if (!lyricsLines.length) return;
+    let idx = -1;
+    for (let i = 0; i < lyricsLines.length; i++) if (lyricsLines[i].t <= time) idx = i; else break;
+    if (idx === lyricsActive) return;
+    lyricsActive = idx;
+    const wrap = $("lyricsWrap"), scroll = $("lyricsScroll");
+    const nodes = scroll.children;
+    for (let i = 0; i < nodes.length; i++) nodes[i].className = "lline" + (i === idx ? " active" : i < idx ? " sung" : "");
+    if (idx >= 0) {
+      const el = nodes[idx];
+      const target = el.offsetTop + el.offsetHeight / 2 - wrap.clientHeight / 2;
+      scroll.style.transform = `translateY(${-target}px)`;
+    }
+  }
+  function setLyricsOpen(on) {
+    body.classList.toggle("lyrics-on", on);
+    $("lyricsBtn").setAttribute("aria-pressed", String(on));
   }
 
   function showTitleCard() {
@@ -579,7 +695,10 @@
   setInterval(() => {
     const s = Math.floor((Date.now() - startedAt) / 1000);
     $("clock").textContent = `${playing ? "PLAY ▸" : "PAUSE ▮▮"} ${String(Math.floor(s / 3600)).padStart(2, "0")}:${fmt(s % 3600)}`;
-    if (ready && player.getDuration) setProgress(player.getCurrentTime(), player.getDuration());
+    if (ready && player.getDuration) {
+      setProgress(player.getCurrentTime(), player.getDuration());
+      syncLyrics(player.getCurrentTime());
+    }
   }, 250);
 
   // ---------- controls ----------
@@ -588,10 +707,11 @@
   $("prev").addEventListener("click", prev);
   $("shuffle").addEventListener("click", () => setShuffle(!shuffled));
   $("full").addEventListener("click", toggleFull);
+  $("lyricsBtn").addEventListener("click", () => setLyricsOpen(!body.classList.contains("lyrics-on")));
 
   // tapping the picture: first tap wakes the controls, a tap while they're up pauses/plays
   document.addEventListener("click", (e) => {
-    if (e.target.closest(".deck")) return;
+    if (e.target.closest(".deck, #lyrics")) return;
     if (swallow) { swallow = false; return; }
     if (body.classList.contains("active") && Date.now() - lastWake > 350) toggle();
   });
@@ -616,6 +736,7 @@
     else if (k === "arrowleft") prev();
     else if (k === "s") setShuffle(!shuffled);
     else if (k === "f") toggleFull();
+    else if (k === "l") setLyricsOpen(!body.classList.contains("lyrics-on"));
   });
 
   // ---------- controls fade away like a real player ----------
