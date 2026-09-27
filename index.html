@@ -424,6 +424,7 @@
 
 <script src="tracks.js"></script>
 <script src="lyrics.js"></script>
+<script src="lyrics.local.js"></script><!-- your own file, gitignored; harmless 404 if it doesn't exist -->
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -517,7 +518,7 @@
     if (!lyricsLines.length) {
       const p = document.createElement("p");
       p.className = "lnote";
-      p.innerHTML = `<b>No lyrics yet</b>Timed lyrics aren't in for "${t.title}". Add them in lyrics.js.`;
+      p.innerHTML = `<b>No lyrics yet</b>Timed lyrics aren't in for "${t.title}". Add them in your own lyrics.local.js.`;
       scroll.appendChild(p);
       return;
     }
