@@ -41,6 +41,16 @@
   /* ================= THE PICTURE ================= */
   .layer { position: fixed; inset: 0; }
 
+  /* blurred, color-matched backdrop — always there, but only visible where the
+     video doesn't reach (the letterbox gaps on a tall/portrait screen). Same
+     trick Spotify/Apple Music use so a horizontal video on a vertical screen
+     dissolves into itself at the edges instead of showing bars. */
+  #ambient {
+    background: #000 center / cover no-repeat;
+    filter: blur(60px) saturate(1.5) brightness(.5);
+    transform: scale(1.25);
+  }
+
   /* still frame under the video: shows while it buffers / between channels */
   #poster {
     background: #000 center / cover no-repeat;
@@ -52,14 +62,25 @@
   #frame { overflow: hidden; background: transparent; }
   #frame iframe {
     position: absolute; top: 50%; left: 50%;
-    /* "object-fit: cover" for a 16:9 iframe, oversized to crop YouTube's chrome */
+    /* "object-fit: cover" for a 16:9 iframe — fills the screen, cropping the
+       sides on a wide screen or the top/bottom on a near-square one */
     width: max(100vw, 177.78vh); height: max(100vh, 56.25vw);
     width: max(100vw, 177.78dvh); height: max(100dvh, 56.25vw);
-    transform: translate(-50%, -50%) scale(1.2);
+    transform: translate(-50%, -50%);
     border: 0; pointer-events: none;
     opacity: 0; transition: opacity .6s;
   }
   body.rolling #frame iframe { opacity: 1; }
+
+  /* on a genuinely tall/portrait screen, cover-cropping a 16:9 video throws away
+     most of the shot — switch to fitting it by width instead, and let the
+     blurred #ambient layer fill the top/bottom gaps that leaves */
+  @media (max-aspect-ratio: 3/4) {
+    #frame iframe {
+      width: 100vw; height: 56.25vw;
+      width: 100dvw; height: 56.25dvw;
+    }
+  }
 
   /* ================= THE TAPE (overlays) ================= */
   .fx { pointer-events: none; }
@@ -326,6 +347,7 @@
 </style>
 </head>
 <body class="active">
+  <div class="layer" id="ambient"></div>
   <div class="layer" id="poster"></div>
   <div class="layer" id="frame"><div id="player"></div></div>
 
@@ -440,8 +462,15 @@
   // best still we can get for a video (maxres doesn't exist for every upload)
   function setPoster(id) {
     const hi = new Image();
-    $("poster").style.backgroundImage = `url(${yt(id, "hqdefault")})`;
-    hi.onload = () => { if (hi.naturalWidth > 200 && cur().id === id) $("poster").style.backgroundImage = `url(${hi.src})`; };
+    const url = `url(${yt(id, "hqdefault")})`;
+    $("poster").style.backgroundImage = url;
+    $("ambient").style.backgroundImage = url;
+    hi.onload = () => {
+      if (hi.naturalWidth > 200 && cur().id === id) {
+        $("poster").style.backgroundImage = `url(${hi.src})`;
+        $("ambient").style.backgroundImage = `url(${hi.src})`;
+      }
+    };
     hi.src = yt(id, "maxresdefault");
   }
 
