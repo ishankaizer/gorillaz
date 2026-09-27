@@ -274,7 +274,9 @@
   @media (max-width: 640px) {
     .buttons button span.lbl { display: none; }
     .end { position: static; }
-    .buttons { gap: 4px; justify-content: space-between; }
+    .buttons { gap: 2px; justify-content: space-between; }
+    .buttons button { padding: 6px 8px; }
+    #play { padding: 10px 14px; }
     .top-right .dim { display: none; }
   }
   @media (orientation: landscape) and (max-height: 500px) {
@@ -404,7 +406,7 @@
       <button id="play" aria-label="Pause" title="Play / pause (Space)">
         <svg id="icoPause" viewBox="0 0 24 24" fill="currentColor"><path d="M5 4h5v16H5zM14 4h5v16h-5z"/></svg>
         <svg id="icoPlay" viewBox="0 0 24 24" fill="currentColor" hidden><path d="M6 3v18l15-9z"/></svg>
-        <span id="playLbl">PAUSE</span>
+        <span class="lbl" id="playLbl">PAUSE</span>
       </button>
       <button id="next" aria-label="Next" title="Next (→)">
         <span class="lbl">FF</span>
@@ -635,7 +637,14 @@
     $("playLbl").textContent = on ? "PAUSE" : "PLAY";
     $("play").setAttribute("aria-label", on ? "Pause" : "Play");
     if (on) { body.classList.add("rolling"); showTitleCard(); }
-    else { body.classList.remove("quiet"); wake(); }
+    else {
+      // Paused: hide the raw YouTube iframe behind the poster/ambient stills.
+      // YouTube's own embed shows its title/channel overlay whenever it isn't
+      // actively playing, and there's no way to switch that off from outside
+      // the iframe — so instead of exposing it, we just cover it back up.
+      body.classList.remove("rolling", "quiet");
+      wake();
+    }
     if ("mediaSession" in navigator) navigator.mediaSession.playbackState = on ? "playing" : "paused";
   }
   function setProgress(t, d) {
