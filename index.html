@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gorillaz Radio</title>
+<meta name="description" content="A tiny Gorillaz-only music player.">
+<meta name="theme-color" content="#121110">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Rubik+Dirt&family=Special+Elite&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0d0c0b;
+    --paper: #f1e7d0;
+    --paper-dim: #b9ae96;
+    --bg: #121110;
+    --accent: #ff3b2f;
+    --shadow: 6px 6px 0 var(--ink);
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; margin: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--paper);
+    font-family: "Special Elite", "Courier New", monospace;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Blurred cover art of whatever's playing, washed in the album colour */
+  .backdrop {
+    position: fixed; inset: -40px;
+    background: var(--bg) center / cover no-repeat;
+    filter: blur(38px) saturate(1.3) brightness(.45);
+    transform: scale(1.1);
+    transition: background-image .6s;
+    z-index: -3;
+  }
+  .wash {
+    position: fixed; inset: 0; z-index: -2;
+    background:
+      radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--accent) 35%, transparent), transparent 60%),
+      radial-gradient(circle, rgba(0,0,0,.55) 1px, transparent 1.6px) 0 0 / 6px 6px;
+    transition: background .6s;
+  }
+  /* Film grain */
+  .grain {
+    position: fixed; inset: 0; z-index: 10; pointer-events: none; opacity: .13; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .stage {
+    min-height: 100%;
+    max-width: 620px;
+    margin: 0 auto;
+    padding: 28px 16px 36px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 22px;
+  }
+
+  /* ---------- Logo ---------- */
+  .logo {
+    margin: 0;
+    font-family: "Rubik Dirt", Impact, sans-serif;
+    font-weight: 400;
+    font-size: clamp(52px, 15vw, 92px);
+    line-height: .9;
+    letter-spacing: .02em;
+    color: var(--paper);
+    text-shadow: 4px 4px 0 var(--ink), 8px 8px 0 var(--accent);
+    transform: rotate(-2.5deg);
+    transition: text-shadow .6s;
+    user-select: none;
+  }
+
+  /* ---------- The TV ---------- */
+  .tv {
+    position: relative;
+    width: 100%;
+    padding: 14px;
+    background: var(--paper);
+    border: 4px solid var(--ink);
+    border-radius: 22px;
+    box-shadow: 10px 10px 0 var(--accent), 10px 10px 0 4px var(--ink);
+    transform: rotate(.8deg);
+    transition: box-shadow .6s;
+  }
+  .screen {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    border: 4px solid var(--ink);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .screen iframe, #player { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  /* Sits over the video so the only controls are ours; tap the screen to play/pause */
+  .glass {
+    position: absolute; inset: 0; cursor: pointer;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px);
+    box-shadow: inset 0 0 60px rgba(0,0,0,.7);
+  }
+  .static {
+    position: absolute; inset: 0;
+    display: grid; place-items: center;
+    background: #111;
+    transition: opacity .4s;
+  }
+  .static::before {
+    content: ""; position: absolute; inset: -50%;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='2'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    opacity: .5;
+    animation: fuzz .35s steps(4) infinite;
+  }
+  @keyframes fuzz {
+    0% { transform: translate(0, 0); } 25% { transform: translate(-6%, 4%); }
+    50% { transform: translate(5%, -5%); } 75% { transform: translate(-3%, -7%); } 100% { transform: translate(0, 0); }
+  }
+  .static span {
+    position: relative;
+    font-family: "Permanent Marker", cursive;
+    font-size: clamp(22px, 6vw, 34px);
+    color: var(--ink);
+    background: var(--accent);
+    padding: 4px 16px;
+    border: 3px solid var(--ink);
+    transform: rotate(-4deg);
+    box-shadow: var(--shadow);
+  }
+  .static.off { opacity: 0; pointer-events: none; }
+  .knobs {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 10px; padding: 0 4px;
+    font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink);
+  }
+  .knobs i {
+    display: inline-block; width: 16px; height: 16px; margin-left: 8px; vertical-align: middle;
+    border: 3px solid var(--ink); border-radius: 50%; background: var(--accent);
+  }
+  .onair { display: inline-flex; align-items: center; gap: 8px; }
+  .onair b {
+    width: 10px; height: 10px; border-radius: 50%; background: #5a1512; border: 2px solid var(--ink);
+  }
+  .playing .onair b { background: #ff2a1a; box-shadow: 0 0 10px #ff2a1a; animation: blink 1.2s infinite; }
+  @keyframes blink { 50% { opacity: .35; } }
+
+  /* ---------- Now playing ---------- */
+  .info { text-align: center; width: 100%; min-height: 96px; }
+  .title {
+    display: inline;
+    margin: 0;
+    font-family: "Permanent Marker", cursive;
+    font-weight: 400;
+    font-size: clamp(26px, 7vw, 40px);
+    line-height: 1.35;
+    color: var(--paper);
+    text-shadow: 3px 3px 0 var(--ink);
+    -webkit-box-decoration-break: clone; box-decoration-break: clone;
+  }
+  .album {
+    margin: 10px 0 0;
+    font-size: 14px; letter-spacing: .22em; text-transform: uppercase;
+    color: var(--paper-dim);
+  }
+  .album em { font-style: normal; color: var(--accent); transition: color .6s; }
+
+  /* ---------- Timeline ---------- */
+  .timeline {
+    width: 100%;
+    display: grid; grid-template-columns: 48px 1fr 48px; align-items: center; gap: 12px;
+    font-size: 14px; color: var(--paper-dim);
+  }
+  .timeline span:last-child { text-align: right; }
+  input[type=range] {
+    --p: 0%;
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 14px; margin: 0;
+    background:
+      linear-gradient(var(--accent), var(--accent)) 0 0 / var(--p) 100% no-repeat,
+      var(--paper);
+    border: 3px solid var(--ink);
+    border-radius: 999px;
+    box-shadow: 3px 3px 0 var(--ink);
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--paper); border: 4px solid var(--ink);
+    box-shadow: 2px 2px 0 var(--ink);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--paper); border: 4px solid var(--ink);
+  }
+  input[type=range]:focus-visible { outline: 3px dashed var(--accent); outline-offset: 5px; }
+
+  /* ---------- Controls ---------- */
+  .controls { display: flex; align-items: center; justify-content: center; gap: clamp(14px, 5vw, 26px); }
+  .btn {
+    display: grid; place-items: center;
+    width: 58px; height: 58px; padding: 0;
+    color: var(--ink);
+    background: var(--paper);
+    border: 4px solid var(--ink);
+    border-radius: 50%;
+    box-shadow: 4px 4px 0 var(--ink);
+    cursor: pointer;
+    transition: transform .08s, box-shadow .08s, background .3s;
+  }
+  .btn svg { width: 26px; height: 26px; }
+  .btn:hover { transform: translate(-1px, -1px) rotate(-4deg); box-shadow: 5px 5px 0 var(--ink); }
+  .btn:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--ink); }
+  .btn:focus-visible { outline: 3px dashed var(--accent); outline-offset: 4px; }
+  .btn.play { width: 84px; height: 84px; background: var(--accent); }
+  .btn.play svg { width: 36px; height: 36px; }
+  .btn.small { width: 48px; height: 48px; }
+  .btn.small svg { width: 22px; height: 22px; }
+  .btn[aria-pressed="true"] { background: var(--accent); }
+  .btn.spacer { visibility: hidden; }
+
+  .count {
+    font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--paper-dim);
+  }
+  .count a { color: inherit; }
+
+  @media (max-width: 420px) {
+    .btn { width: 52px; height: 52px; }
+    .btn.play { width: 76px; height: 76px; }
+    .btn.small { width: 44px; height: 44px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .static::before, .playing .onair b { animation: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="backdrop" id="backdrop"></div>
+  <div class="wash"></div>
+  <div class="grain"></div>
+
+  <main class="stage" id="stage">
+    <h2 class="logo" aria-label="Gorillaz">GORILLAZ</h2>
+
+    <div class="tv">
+      <div class="screen">
+        <div id="player"></div>
+        <div class="glass" id="glass" title="Play / pause"></div>
+        <div class="static" id="static"><span id="staticText">TUNING IN…</span></div>
+      </div>
+      <div class="knobs">
+        <span class="onair"><b></b>On air</span>
+        <span>Kong FM<i></i><i></i></span>
+      </div>
+    </div>
+
+    <section class="info" aria-live="polite">
+      <h1 class="title" id="title">&nbsp;</h1>
+      <p class="album" id="album">&nbsp;</p>
+    </section>
+
+    <div class="timeline">
+      <span id="cur">0:00</span>
+      <input type="range" id="seek" min="0" max="1000" value="0" step="1" aria-label="Timeline">
+      <span id="dur">0:00</span>
+    </div>
+
+    <div class="controls">
+      <button class="btn small" id="shuffle" aria-pressed="false" aria-label="Shuffle" title="Shuffle (S)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h3.5c2 0 3.2 1 4.3 2.7l2.4 4.1c1 1.7 2.3 2.7 4.3 2.7H21"/><path d="M3 17h3.5c1.4 0 2.4-.5 3.2-1.4M14.3 8.4c.8-.9 1.8-1.4 3.2-1.4H21"/><path d="m18 4 3 3-3 3M18 14l3 3-3 3"/></svg>
+      </button>
+      <button class="btn" id="prev" aria-label="Previous" title="Previous (←)">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 4.5h3v15H5zM20 5.2v13.6a.8.8 0 0 1-1.2.7L9 12.7a.8.8 0 0 1 0-1.4l9.8-6.8a.8.8 0 0 1 1.2.7z"/></svg>
+      </button>
+      <button class="btn play" id="play" aria-label="Play" title="Play / pause (Space)">
+        <svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.6v14.8a1 1 0 0 0 1.5.9l11.6-7.4a1 1 0 0 0 0-1.8L8.5 3.7A1 1 0 0 0 7 4.6z"/></svg>
+        <svg id="iconPause" viewBox="0 0 24 24" fill="currentColor" hidden><rect x="5.5" y="4" width="4.5" height="16" rx="1"/><rect x="14" y="4" width="4.5" height="16" rx="1"/></svg>
+      </button>
+      <button class="btn" id="next" aria-label="Next" title="Next (→)">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 4.5h3v15h-3zM4 5.2v13.6a.8.8 0 0 0 1.2.7l9.8-6.8a.8.8 0 0 0 0-1.4L5.2 4.5A.8.8 0 0 0 4 5.2z"/></svg>
+      </button>
+      <button class="btn small spacer" tabindex="-1" aria-hidden="true"></button>
+    </div>
+
+    <p class="count" id="count"></p>
+  </main>
+
+<script src="tracks.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const els = {
+    stage: $("stage"), backdrop: $("backdrop"), glass: $("glass"), stat: $("static"), statText: $("staticText"),
+    title: $("title"), album: $("album"), cur: $("cur"), dur: $("dur"), seek: $("seek"),
+    shuffle: $("shuffle"), prev: $("prev"), play: $("play"), next: $("next"),
+    iconPlay: $("iconPlay"), iconPause: $("iconPause"), count: $("count"),
+  };
+
+  const identity = TRACKS.map((_, i) => i);
+  let order = identity.slice();
+  let pos = Math.floor(Math.random() * TRACKS.length);
+  let shuffled = false;
+  let player = null;
+  let ready = false;
+  let started = false;   // becomes true on the first press of play (browsers block autoplay before that)
+  let playing = false;
+  let dragging = false;
+  let failStreak = 0;
+
+  const current = () => TRACKS[order[pos]];
+
+  function fmt(s) {
+    s = Math.max(0, Math.floor(s || 0));
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  }
+
+  function shuffleArray(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function paint() {
+    const t = current();
+    document.documentElement.style.setProperty("--accent", t.accent);
+    els.title.textContent = t.title;
+    els.album.innerHTML = `<em>${t.name}</em> · ${t.year}`;
+    els.backdrop.style.backgroundImage = `url(https://i.ytimg.com/vi/${t.id}/hqdefault.jpg)`;
+    els.count.textContent = `Track ${pos + 1} / ${TRACKS.length}`;
+    document.title = `${t.title} — Gorillaz Radio`;
+    setProgress(0, 0);
+
+    if ("mediaSession" in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: t.title, artist: "Gorillaz", album: t.name,
+        artwork: [{ src: `https://i.ytimg.com/vi/${t.id}/hqdefault.jpg`, sizes: "480x360", type: "image/jpeg" }],
+      });
+    }
+  }
+
+  function load(autoplay) {
+    paint();
+    if (!ready) return;
+    const id = current().id;
+    if (autoplay) player.loadVideoById(id);
+    else player.cueVideoById(id);
+  }
+
+  function go(step) {
+    pos = (pos + step + order.length) % order.length;
+    load(started);
+  }
+
+  function next() { go(1); }
+  function prev() {
+    if (ready && player.getCurrentTime() > 3) player.seekTo(0, true);
+    else go(-1);
+  }
+
+  function toggle() {
+    if (!ready) return;
+    if (!started) {
+      started = true;
+      player.playVideo();
+      return;
+    }
+    playing ? player.pauseVideo() : player.playVideo();
+  }
+
+  function setShuffle(on) {
+    const now = order[pos];
+    shuffled = on;
+    if (on) {
+      order = [now, ...shuffleArray(identity.filter((i) => i !== now))];
+      pos = 0;
+    } else {
+      order = identity.slice();
+      pos = now;
+    }
+    els.shuffle.setAttribute("aria-pressed", String(on));
+    els.count.textContent = `Track ${pos + 1} / ${TRACKS.length}`;
+  }
+
+  function setPlaying(on) {
+    playing = on;
+    els.iconPlay.hidden = on;
+    els.iconPause.hidden = !on;
+    els.play.setAttribute("aria-label", on ? "Pause" : "Play");
+    els.stage.classList.toggle("playing", on);
+    if (on) els.stat.classList.add("off");
+    if ("mediaSession" in navigator) navigator.mediaSession.playbackState = on ? "playing" : "paused";
+  }
+
+  function setProgress(t, d) {
+    els.cur.textContent = fmt(t);
+    els.dur.textContent = fmt(d);
+    if (!dragging) {
+      const v = d ? (t / d) * 1000 : 0;
+      els.seek.value = v;
+      els.seek.style.setProperty("--p", `${v / 10}%`);
+    }
+  }
+
+  // ---------- YouTube ----------
+  window.onYouTubeIframeAPIReady = function () {
+    player = new YT.Player("player", {
+      videoId: current().id,
+      playerVars: {
+        controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3, modestbranding: 1,
+        playsinline: 1, rel: 0, origin: location.origin,
+      },
+      events: {
+        onReady: () => { ready = true; els.statText.textContent = "HIT PLAY"; },
+        onStateChange: (e) => {
+          const S = YT.PlayerState;
+          if (e.data === S.PLAYING) { failStreak = 0; setPlaying(true); }
+          else if (e.data === S.PAUSED) setPlaying(false);
+          else if (e.data === S.ENDED) { setPlaying(false); next(); }
+        },
+        onError: () => {
+          // Video removed or not embeddable in this region: move on to the next one.
+          if (++failStreak > 8) { setPlaying(false); return; }
+          setTimeout(next, 400);
+        },
+      },
+    });
+  };
+
+  const tag = document.createElement("script");
+  tag.src = "https://www.youtube.com/iframe_api";
+  tag.onerror = () => { els.statText.textContent = "NO SIGNAL"; };
+  document.head.appendChild(tag);
+
+  setInterval(() => {
+    if (!ready || !started) return;
+    setProgress(player.getCurrentTime(), player.getDuration());
+  }, 250);
+
+  // ---------- Controls ----------
+  els.play.addEventListener("click", toggle);
+  els.glass.addEventListener("click", toggle);
+  els.next.addEventListener("click", next);
+  els.prev.addEventListener("click", prev);
+  els.shuffle.addEventListener("click", () => setShuffle(!shuffled));
+
+  els.seek.addEventListener("input", () => {
+    dragging = true;
+    els.seek.style.setProperty("--p", `${els.seek.value / 10}%`);
+    if (ready) els.cur.textContent = fmt((els.seek.value / 1000) * player.getDuration());
+  });
+  els.seek.addEventListener("change", () => {
+    dragging = false;
+    if (ready && started) player.seekTo((els.seek.value / 1000) * player.getDuration(), true);
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.target.tagName === "INPUT") return;
+    if (e.target.tagName === "BUTTON" && (e.key === " " || e.key === "Enter")) return; // native click
+    if (e.key === " " || e.key === "k") { e.preventDefault(); toggle(); }
+    else if (e.key === "ArrowRight") next();
+    else if (e.key === "ArrowLeft") prev();
+    else if (e.key.toLowerCase() === "s") setShuffle(!shuffled);
+  });
+
+  if ("mediaSession" in navigator) {
+    navigator.mediaSession.setActionHandler("play", toggle);
+    navigator.mediaSession.setActionHandler("pause", toggle);
+    navigator.mediaSession.setActionHandler("nexttrack", next);
+    navigator.mediaSession.setActionHandler("previoustrack", prev);
+  }
+
+  paint();
+</script>
+</body>
+</html>

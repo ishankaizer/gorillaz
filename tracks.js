@@ -1,0 +1,140 @@
+// Every track is an official upload (music video, visualiser or label "topic" audio)
+// embedded from YouTube. If one ever gets removed or blocks embedding, the player
+// just skips it.
+const ALBUMS = {
+  g:   { name: "Gorillaz",           year: 2001, accent: "#f5d90a" },
+  dd:  { name: "Demon Days",         year: 2005, accent: "#ff3b2f" },
+  pb:  { name: "Plastic Beach",      year: 2010, accent: "#27d3e0" },
+  dm:  { name: "Plastic Beach era",  year: 2010, accent: "#27d3e0" },
+  tf:  { name: "The Fall",           year: 2010, accent: "#e0a63b" },
+  hz:  { name: "Humanz",             year: 2017, accent: "#c257ff" },
+  sp:  { name: "Humanz era",         year: 2017, accent: "#c257ff" },
+  nn:  { name: "The Now Now",        year: 2018, accent: "#ff6fb0" },
+  sm:  { name: "Song Machine, Season One", year: 2020, accent: "#ff8a1f" },
+  mw:  { name: "Meanwhile EP",       year: 2021, accent: "#5fe36b" },
+  ci:  { name: "Cracker Island",     year: 2023, accent: "#8d7bff" },
+  mt:  { name: "The Mountain",       year: 2026, accent: "#ffb627" },
+};
+
+const TRACKS = [
+  // Gorillaz (2001)
+  ["Re-Hash", "g", "Tv1SYqLllKI"],
+  ["5/4", "g", "SaqUBaD_nn4"],
+  ["Tomorrow Comes Today", "g", "PiNdcBg3xC8"],
+  ["New Genius (Brother)", "g", "WFrd_HyHf3E"],
+  ["Clint Eastwood", "g", "1V_xRb0x9aw"],
+  ["Man Research (Clapper)", "g", "_PAe0WYM-XU"],
+  ["Punk", "g", "nU4e_MbGS8A"],
+  ["Sound Check (Gravity)", "g", "uQpclIzUwLk"],
+  ["Double Bass", "g", "_ONnnlhrM-g"],
+  ["Rock the House", "g", "lRlmM88zzbY"],
+  ["19-2000", "g", "WXR-bCF5dbM"],
+  ["Starshine", "g", "3X_cRAM4yVo"],
+  ["Slow Country", "g", "hqIWJeKA-HM"],
+  ["M1 A1", "g", "HWvPWQCWbsU"],
+
+  // Demon Days (2005)
+  ["Last Living Souls", "dd", "k7wIluiBvZE"],
+  ["Kids with Guns", "dd", "VCkFSe3voRc"],
+  ["O Green World", "dd", "tMt_YXr90AM"],
+  ["Dirty Harry", "dd", "cLnkQAeMbIM"],
+  ["Feel Good Inc.", "dd", "HyHNuVaZJ-k"],
+  ["El Mañana", "dd", "hji4gBuOvIQ"],
+  ["Every Planet We Reach Is Dead", "dd", "esVtIHhq0uc"],
+  ["November Has Come", "dd", "IHqOsme3H_U"],
+  ["All Alone", "dd", "VHhND-BkWdk"],
+  ["White Light", "dd", "P91kQ8ADh5Q"],
+  ["DARE", "dd", "uAOR6ib95kQ"],
+  ["Fire Coming Out of the Monkey's Head", "dd", "OBabG0T2fwQ"],
+  ["Don't Get Lost in Heaven", "dd", "1L0bdrrJegA"],
+
+  // Plastic Beach (2010)
+  ["Welcome to the World of the Plastic Beach", "pb", "vruyqXg67rw"],
+  ["Rhinestone Eyes", "pb", "yYDmaexVHic"],
+  ["Stylo", "pb", "nhPaWIeULKk"],
+  ["Superfast Jellyfish", "pb", "t6BPyilmanI"],
+  ["Empire Ants", "pb", "C-yP9f0gadU"],
+  ["Glitter Freeze", "pb", "DV7tqGOoIJM"],
+  ["Some Kind of Nature", "pb", "tjWZ4GQd49c"],
+  ["On Melancholy Hill", "pb", "04mfKJWDSzI"],
+  ["Broken", "pb", "crC4DKiKPYY"],
+  ["Sweepstakes", "pb", "YNIdGA9r8Dg"],
+  ["Plastic Beach", "pb", "sn3S1LbR5FY"],
+  ["To Binge", "pb", "sY20vr7-MpM"],
+  ["Cloud of Unknowing", "pb", "h7H73jpgX3U"],
+  ["Pirate Jet", "pb", "Xqqb0LGVKiI"],
+  ["Doncamatic", "dm", "OJQyTnD74gk"],
+
+  // The Fall (2010)
+  ["Phoner to Arizona", "tf", "SAeUwuUGSaM"],
+  ["Revolving Doors", "tf", "ePoSILQJeOg"],
+  ["Hillbilly Man", "tf", "AqEwXE0JwuQ"],
+
+  // Humanz (2017)
+  ["Ascension", "hz", "QHncVL94_Ac"],
+  ["Strobelite", "hz", "DAXjiVuzlPw"],
+  ["Saturnz Barz", "hz", "5qJp6xlKEug"],
+  ["Momentz", "hz", "wgFDXSCHkgo"],
+  ["Submission", "hz", "sK4_drvjb4U"],
+  ["Charger", "hz", "m7e8LQ2T-hI"],
+  ["Andromeda", "hz", "9W44NWYwa1g"],
+  ["Let Me Out", "hz", "0dxFG0D_znI"],
+  ["She's My Collar", "hz", "-W20dfeNCmI"],
+  ["Hallelujah Money", "hz", "3rKCUq5PCqY"],
+  ["We Got the Power", "hz", "HSivlaSVk1k"],
+  ["Sleeping Powder", "sp", "GzJGWAfmBco"],
+
+  // The Now Now (2018)
+  ["Humility", "nn", "E5yFcdPAGv0"],
+  ["Tranz", "nn", "E2Q52cVx7Bo"],
+  ["Hollywood", "nn", "GgwE94KZJ7E"],
+  ["Kansas", "nn", "skKP6QwOXYA"],
+  ["Sorcererz", "nn", "40xG4bMr9F4"],
+  ["Idaho", "nn", "GUHkwJiaBe0"],
+  ["Lake Zurich", "nn", "68JpPpSc7bs"],
+  ["Magic City", "nn", "ixnDm02uEeE"],
+  ["Fire Flies", "nn", "LCet4yrfp4o"],
+  ["One Percent", "nn", "x42vW0y_uFo"],
+  ["Souk Eye", "nn", "-B57lnGcMpY"],
+
+  // Song Machine, Season One (2020)
+  ["Strange Timez", "sm", "bbA5p54Rw2M"],
+  ["The Valley of the Pagans", "sm", "vQIn3CREYrs"],
+  ["The Lost Chord", "sm", "FJVV8o6vgso"],
+  ["PAC-MAN", "sm", "G-7U-FDql1A"],
+  ["The Pink Phantom", "sm", "CJ68kQLS250"],
+  ["Aries", "sm", "PKXloFW_ZCA"],
+  ["Friday 13th", "sm", "O1ALIgizTcc"],
+  ["Dead Butterflies", "sm", "TK2cQPa1lvw"],
+  ["Désolé", "sm", "ZLKZKmdZEjM"],
+  ["Momentary Bliss", "sm", "QTt7301PR5k"],
+  ["Opium", "sm", "Idt5gNZGi9Q"],
+  ["Severed Head", "sm", "FlwcY7OPmAI"],
+  ["How Far?", "sm", "GiWduWEtma4"],
+
+  // Meanwhile EP (2021)
+  ["Meanwhile", "mw", "XY4Sr1KibUE"],
+  ["Jimmy Jimmy", "mw", "36wBq2_Sn6w"],
+
+  // Cracker Island (2023)
+  ["Cracker Island", "ci", "S03T47hapAc"],
+  ["Oil", "ci", "lK5HVlcs0og"],
+  ["The Tired Influencer", "ci", "qP4BYTDeR84"],
+  ["Silent Running", "ci", "_0Pf48RqSsg"],
+  ["New Gold", "ci", "qJa-VFwPpYA"],
+  ["Baby Queen", "ci", "5ZPnmEeXnRY"],
+  ["Tarantula", "ci", "CZdyJN99VJ4"],
+  ["Tormenta", "ci", "kO8Nj09525U"],
+  ["Skinny Ape", "ci", "vZWfEqqfDaM"],
+  ["Possession Island", "ci", "X9L3UWPRR6M"],
+  ["Captain Chicken", "ci", "IOhFk7-6LuU"],
+
+  // The Mountain (2026)
+  ["The Moon Cave", "mt", "2TdLuQqempg"],
+  ["The Happy Dictator", "mt", "MG_npaLydKg"],
+  ["The Hardest Thing", "mt", "SSlpuafIRkU"],
+  ["Orange County", "mt", "Kkyi3X21W7s"],
+  ["The God of Lying", "mt", "kJChWUcesJ4"],
+  ["The Manifesto", "mt", "6JIv1l96zN0"],
+  ["Damascus", "mt", "BrPffpg9KFM"],
+].map(([title, album, id]) => ({ title, id, ...ALBUMS[album] }));
