@@ -1,24 +1,24 @@
-# Gorillaz Radio
+# KONG FM — Gorillaz, live
 
-A super simple, Gorillaz-only music player. It has one screen: an old Kong Studios TV plays the song, and underneath are a timeline and the shuffle, back, play/pause and next buttons.
+A full-screen Gorillaz "TV station". Open it and you land in the middle of whatever's on air: the official music video fills the screen, with VHS grain, scanlines, a rolling tracking band, a LIVE bug and a torn-paper title card on top.
 
-- **101 songs** from every studio album: *Gorillaz*, *Demon Days*, *Plastic Beach*, *The Fall*, *Humanz*, *The Now Now*, *Song Machine*, *Meanwhile EP*, *Cracker Island* and *The Mountain*.
-- Each album has its own accent colour, and the page re-themes itself as the tracks change.
-- Songs stream from Gorillaz's official YouTube uploads (videos, visualisers and label audio) through the YouTube IFrame API, with custom controls on top. If a video gets taken down or can't be embedded, the player skips it.
-- Fonts: **Rubik Dirt** for the logo, **Permanent Marker** for song titles and **Special Elite** for the typewriter labels.
-- Keyboard: `Space` plays or pauses, `←`/`→` go back and forward, `S` toggles shuffle. Phone lock-screen controls work through the Media Session API.
+- **140 songs** in Spotify's album order: *Gorillaz*, *G-Sides* (Dracula), *Demon Days*, *Plastic Beach*, *The Fall*, *Humanz* (deluxe), *The Now Now*, *Song Machine* (deluxe), *Meanwhile EP*, *Cracker Island* (deluxe) and *The Mountain*, plus the Doncamatic and Sleeping Powder singles. Intros and interludes are left out.
+- Sound and picture come from Gorillaz's official YouTube uploads, played on the page itself. Videos that get removed or won't embed are skipped.
+- It works like a live station. Shuffle order is seeded by the day and the clock picks the song, so you tune in mid-song. Shuffle off plays the albums in order.
+- Switching channels plays a static burst, flashes frames from the next video and shows a channel number.
+- The controls (timeline, shuffle, back, play/pause, next, fullscreen) fade out after a few seconds and come back when you move or tap.
 
-## Run it
+**Why "tap to tune in":** every browser blocks autoplay with sound, so the station starts playing muted and your first tap or keypress turns the sound on (and goes fullscreen where the browser allows it). On iPhone, Safari can't make a web page fullscreen, but *Share → Add to Home Screen* runs it fullscreen.
 
-YouTube embeds need a real `http(s)://` origin, so opening the file directly from disk won't work. Serve the folder instead:
+Keys: `Space` play/pause · `←` `→` back/next · `S` shuffle · `F` fullscreen.
 
-```sh
-python3 -m http.server 8000
-# then open http://localhost:8000
-```
+## Deploy
 
-To put it online, turn on **GitHub Pages** for this repo (Settings → Pages → deploy from branch, root folder). It's plain static HTML with no build step.
+It's a plain static site with no build step. Vercel serves `index.html` from the repo root.
 
-## Adding songs
+## Editing the lineup
 
-Add a line to `tracks.js`: `["Song Title", "albumKey", "youtubeVideoId"]`.
+`tracks.js`, one line per song: `["Title", "albumKey", "youtubeId"]`.
+
+---
+Unofficial fan project. Music, videos and artwork © Gorillaz / Kong / Parlophone / Jamie Hewlett.
