@@ -450,6 +450,20 @@
   let tuneAt = 0.12 + ((Date.now() % SLOT) / SLOT) * 0.6; // fraction into the first song
   let shuffled = true;
 
+  // Deep link: ?t=<youtube id> (or ?t=<song title>) jumps straight to that
+  // song on load instead of whatever the station would normally be playing —
+  // handy for checking a specific song (e.g. while testing lyrics timing)
+  // without waiting for shuffle to land on it.
+  const want = new URLSearchParams(location.search).get("t");
+  if (want) {
+    const w = want.toLowerCase();
+    const hit = TRACKS.findIndex((tr) => tr.id === want || tr.title.toLowerCase() === w);
+    if (hit !== -1) {
+      order = albumOrder; shuffled = false; pos = hit; tuneAt = 0;
+      $("shuffle").setAttribute("aria-pressed", "false");
+    }
+  }
+
   const cur = () => TRACKS[order[pos]];
 
   // ---------- state ----------
